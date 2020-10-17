@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="0.1" author="me" context="derby">
+        <createProcedure>
+            CREATE FUNCTION MD5(STR VARCHAR(128))
+            RETURNS VARCHAR(32)
+            PARAMETER STYLE JAVA
+            NO SQL LANGUAGE JAVA
+            EXTERNAL NAME 'project.util.MD5.md5'
+        </createProcedure> 
+    </changeSet>
+
+    <changeSet id="1.1" author="me">
+        <createTable tableName="users">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="name" type="varchar(64)">
+                <constraints nullable="false" />
+            </column>
+            <column name="passwd" type="varchar(64)">
+                <constraints nullable="true" />
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="2.1" author="me">
+        <createTable tableName="roles">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="name" type="varchar(64)">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+
+        <createTable tableName="users_roles">
+            <column name="user_id" type="bigint">
+                <constraints
+                    foreignKeyName="users_roles_users_fk"
+                    referencedTableName="users"
+                    referencedColumnNames="id" nullable="false" />
+            </column>
+            <column name="role_id" type="bigint">
+                <constraints
+                    foreignKeyName="users_roles_roles_fk"
+                    referencedTableName="roles"
+                    referencedColumnNames="id" nullable="false" />
+            </column>
+        </createTable>
+
+        <addPrimaryKey columnNames="user_id, role_id"
+            tableName="users_roles" constraintName="users_roles_pk" />
+    </changeSet>
+
+    <changeSet id="2.1.1" author="me" context="test">
+        <insert tableName="users">
+            <column name="name" value="user" />
+        </insert>
+
+        <insert tableName="roles">
+            <column name="name" value="ROLE_USER" />
+        </insert>
+        <insert tableName="roles">
+            <column name="name" value="ROLE_ADMIN" />
+        </insert>
+        <sql>
+            INSERT INTO users_roles (user_id, role_id) VALUES(
+                (SELECT id FROM users WHERE name = 'user'),
+                (SELECT id FROM roles WHERE name = 'ROLE_USER')
+            )
+        </sql>
+        <sql>
+            INSERT INTO users_roles (user_id, role_id) VALUES(
+                (SELECT id FROM users WHERE name = 'user'),
+                (SELECT id FROM roles WHERE name = 'ROLE_ADMIN')
+            )
+        </sql>
+    </changeSet>
+
+    <changeSet id="3.1" author="yuri">
+        <createTable tableName="payments">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints 
+                    foreignKeyName="payments_user_fk"
+                    referencedTableName="users"
+                    referencedColumnNames="id" nullable="false" />
+            </column>
+            <column name="amount" type="float">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="3.1.1" author="yuri" context="test">
+         <sql>
+            INSERT INTO payments (user_id, amount) VALUES (
+                (SELECT id FROM users WHERE name = 'user'),
+                100.10
+            )
+        </sql>
+        <sql>
+            INSERT INTO payments (user_id, amount) VALUES (
+                (SELECT id FROM users WHERE name = 'user'),
+                200.20
+            )
+        </sql>
+        
+             
+         <sql>
+            CREATE TRIGGER trigger_add 
+                AFTER INSERT ON users 
+                REFERENCING NEW AS NEW
+                FOR EACH ROW MODE DB2SQL
+                UPDATE users SET passwd = MD5(NEW.passwd) WHERE id = NEW.id;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

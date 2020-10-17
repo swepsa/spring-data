@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="User">
+
+    <resultMap type="user" id="user">
+        <id column="user_id" property="id" />
+        <result column="user_name" property="name" />
+        <collection property="roles" resultMap="Role.role" />
+    </resultMap>
+
+    <insert id="create" parameterType="user" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (name) VALUES (#{name})
+    </insert>
+
+    <select id="read" resultMap="user">
+        SELECT
+            u.id AS user_id, u.name AS user_name,
+            r.id AS role_id, r.name AS role_name
+        FROM
+            users u
+        JOIN users_roles ur ON ur.user_id = u.id
+        JOIN roles r ON r.id = ur.role_id
+        WHERE
+            u.id = #{id}
+    </select>
+
+    <select id="findByName" resultMap="user">
+        SELECT
+            u.id AS user_id, u.name AS user_name,
+            r.id AS role_id, r.name AS role_name
+        FROM
+            users u
+        JOIN users_roles ur ON ur.user_id = u.id
+        JOIN roles r ON r.id = ur.role_id
+        WHERE
+            u.name = #{name}
+    </select>
+    
+    <select id="findAll" resultMap="user">
+        SELECT
+            u.id AS user_id, u.name AS user_name,
+            r.id AS role_id, r.name AS role_name
+        FROM
+            users u
+        JOIN users_roles ur ON ur.user_id = u.id
+        JOIN roles r ON r.id = ur.role_id
+    </select>
+        
+    <update id="update" parameterType="user">
+        UPDATE users SET name = #{name} WHERE id = #{id} 
+    </update>
+    
+    <delete id="deleteUsers_roles">
+        DELETE FROM users_roles WHERE user_id = #{id}
+    </delete>
+    
+    <insert id="addRole"> 
+        INSERT INTO users_roles (user_id, role_id) VALUES (#{uid},#{rid})
+    </insert>
+    
+    <delete id="deleteUser">
+        DELETE FROM users WHERE id=#{id}
+    </delete>
+
+</mapper>
