@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        https://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <bean id="dataSource"
+        class="org.apache.commons.dbcp2.BasicDataSource"
+        destroy-method="close">
+        <property name="driverClassName"
+            value="org.apache.derby.jdbc.EmbeddedDriver" />
+        <property name="url" value="jdbc:derby:.db;create=true" />
+        <property name="username" value="" />
+        <property name="password" value="" />
+    </bean>
+
+    <bean id="liquibase"
+        class="liquibase.integration.spring.SpringLiquibase">
+        <property name="dataSource" ref="dataSource" />
+        <property name="changeLog"
+            value="classpath:db-changelog.xml" />
+        <property name="contexts" value="test, production" />
+    </bean>
+ 
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <property name="configLocation" value="classpath:/mybatis.xml" />
+    </bean>
+
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:hibernate.cfg.xml"/>
+        <property name="hibernateProperties">
+            <value>
+                org.hibernate.dialect.DB2Dialect
+            </value>
+        </property>
+    </bean>
+
+    <bean id="txManager"
+            class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+    
+    <tx:advice id="txAdvice" transaction-manager="txManager">
+        <tx:attributes>
+            <tx:method name="*" rollback-for="Throwable"
+                isolation="READ_COMMITTED" propagation="REQUIRED" />
+        </tx:attributes>
+    </tx:advice>
+
+    <aop:config>
+        <aop:pointcut id="txOperation"
+            expression="execution(* project.services..*ServiceImpl.*(..))" />
+        <aop:advisor advice-ref="txAdvice"
+            pointcut-ref="txOperation" />
+    </aop:config>
+
+    <bean id="dao" abstract="true" class="org.springframework.jdbc.core.support.JdbcDaoSupport">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+
+    <bean id="mybatisDao" abstract="true" class="org.mybatis.spring.support.SqlSessionDaoSupport">
+        <property name="sqlSessionFactory" ref="sqlSessionFactory" />
+    </bean>
+
+    <bean id="hiberDao" abstract="true" class="org.springframework.orm.hibernate5.support.HibernateDaoSupport">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+
+    <bean id="userDao" class="project.dao.hibernate.UserHibernateDao" parent="hiberDao" />
+
+    <bean id="userService" class="project.services.UserServiceImpl">
+        <property name="userDao" ref="userDao" />
+    </bean>
+
+     <bean id="roleDao" class="project.dao.hibernate.RoleHibernateDao"  parent="hiberDao" />
+
+    <bean id="roleService" class="project.services.RoleServiceImpl">
+        <property name="roleDao" ref="roleDao" />
+    </bean>
+
+</beans>
